@@ -379,9 +379,9 @@
             // 1. https://aistudio.google.com/app/apikey にアクセスします。
             // 2. 「Create API key in new project」をクリックしてキーを生成します。
             // 3. 生成されたキーをコピーして、下の 'YOUR_API_KEY_HERE' の部分に貼り付けます。
-            const apiKey = "AIzaSyC8NIy4zndu6_GCGEIbnqeHYfbQw7COOys"; 
+            const apiKey = "YOUR_API_KEY_HERE"; 
 
-            if (apiKey === "AIzaSyC8NIy4zndu6_GCGEIbnqeHYfbQw7COOys" || apiKey === "") {
+            if (apiKey === "YOUR_API_KEY_HERE" || apiKey === "") {
                 geminiExplanationEl.innerHTML = '<p class="text-center text-red-600 font-bold">APIキーが設定されていません。<br>HTMLファイル内のコードを編集し、Google AI Studioで取得したAPIキーを設定してください。</p>';
                 geminiLoader.style.display = 'none';
                 return;
@@ -429,5 +429,6 @@
     </script>
 </body>
 </html>
+
 
 
