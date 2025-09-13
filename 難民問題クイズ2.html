@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>難民危機と人権保護に関するクイズ【第二弾】</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN', 'メイリオ', Meiryo, sans-serif;
+        }
+        .correct {
+            background-color: #22c55e !important; /* green-500 */
+            color: white !important;
+            border-color: #16a34a !important; /* green-600 */
+        }
+        .incorrect {
+            background-color: #ef4444 !important; /* red-500 */
+            color: white !important;
+            border-color: #dc2626 !important; /* red-600 */
+        }
+        .rationale {
+            transition: opacity 0.5s ease-in-out;
+        }
+        /* Gemini Modal Styles */
+        #gemini-modal {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, .1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #09f;
+            animation: spin 1s ease infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen p-4">
+
+    <div id="quiz-container" class="bg-white w-full max-w-2xl rounded-2xl shadow-xl p-6 md:p-8 transition-all duration-500">
+        
+        <!-- Start Screen -->
+        <div id="start-screen">
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 text-center">難民危機と人権保護に関するクイズ【第二弾】</h1>
+            <p class="mt-4 text-slate-600 text-center">追加の10問で、さらに理解を深めましょう。準備ができたら、下のボタンを押してクイズを開始してください。</p>
+            
+            <div class="mt-8 flex justify-center">
+                <button id="start-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                    クイズを開始
+                </button>
+            </div>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-slate-800">問題 <span id="question-number"></span>/10</h2>
+                <div id="progress-bar" class="w-1/2 bg-slate-200 rounded-full h-2.5">
+                    <div id="progress" class="bg-blue-600 h-2.5 rounded-full" style="width: 10%"></div>
+                </div>
+            </div>
+            <p id="question-text" class="text-lg text-slate-700 mb-6 min-h-[6rem]"></p>
+            
+            <div id="answer-buttons" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Answer buttons will be generated here -->
+            </div>
+
+            <div id="rationale-container" class="mt-6">
+                <!-- Rationale text will be shown here -->
+            </div>
+            
+            <div class="mt-8 flex justify-between items-center">
+                <button id="explain-btn" class="bg-purple-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-purple-700 transition-colors shadow-md hidden">
+                    ✨ もっと詳しく解説
+                </button>
+                <button id="next-btn" class="bg-slate-800 text-white font-bold py-2 px-6 rounded-lg hover:bg-slate-900 transition-colors shadow-md hidden">
+                    次の問題へ
+                </button>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="result-screen" class="hidden text-center">
+            <h1 class="text-3xl font-bold text-slate-800">クイズ終了</h1>
+            <p class="mt-4 text-lg text-slate-600">お疲れ様でした！</p>
+            <div class="mt-8 bg-blue-100 border-2 border-blue-300 rounded-xl p-6">
+                <p class="text-xl text-blue-800">あなたのスコア</p>
+                <p id="score-text" class="text-6xl font-bold text-blue-700 my-2">8/10</p>
+                <p id="score-message" class="text-blue-800 font-semibold"></p>
+            </div>
+            <div class="mt-8">
+                <button id="restart-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+                    もう一度挑戦する
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Gemini Explanation Modal -->
+    <div id="gemini-modal" class="fixed inset-0 z-50 items-center justify-center hidden">
+        <div id="gemini-modal-content" class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-lg w-full relative">
+            <h3 id="gemini-title" class="text-xl font-bold text-slate-800 mb-4">AIによる解説</h3>
+            <div id="gemini-explanation" class="text-slate-700 max-h-[60vh] overflow-y-auto">
+                <!-- Loading spinner -->
+                <div id="gemini-loader" class="flex justify-center items-center h-32">
+                    <div class="spinner"></div>
+                </div>
+                <!-- Explanation text will be inserted here -->
+            </div>
+            <button id="gemini-close-btn" class="absolute top-4 right-4 text-slate-500 hover:text-slate-800">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        const quizData = [
+            {
+                question: "移民政策の「外部化」の一種である「オフショア亡命処理」とは、具体的にどのような慣行を指しますか？",
+                topic: "オフショア亡命処理",
+                answers: [
+                    { text: "難民申請者が最初に到着した国で申請を処理する慣行です。", correct: false, rationale: "これは「ダブリン規則」の基本原則であり、責任を外部に移す「外部化」とは異なります。" },
+                    { text: "庇護を求めた国以外の第三国で庇護申請者の申請を処理する慣行です。", correct: true, rationale: "自国の領土外（オフショア）で申請プロセスを行うことで、国内の責任を回避しようとする政策です。" },
+                    { text: "難民申請者が自国での申請を拒否し、他国に移動する慣行です。", correct: false, rationale: "これは申請者個人の行動であり、国家の政策を指すものではありません。" },
+                    { text: "国際機関が難民申請の処理を主導する慣行です。", correct: false, rationale: "国際機関の関与はありますが、「オフショア処理」は特定の国家が主導する政策です。" }
+                ]
+            },
+            {
+                question: "オーストラリアの「パシフィック・ソリューション」において、「オフショル地」として宣言されることで、庇護希望者はどのような影響を受けましたか？",
+                topic: "オーストラリアのパシフィック・ソリューション",
+                answers: [
+                    { text: "オーストラリア国内で難民として優先的に認定されました。", correct: false, rationale: "実際はその逆で、オーストラリア国内での認定プロセスから除外される結果となりました。" },
+                    { text: "オーストラリア国境内で亡命を申請することができなくなり、第三国での処理を余儀なくされました。", correct: true, rationale: "「オフショル地」宣言は、オーストラリア本土での庇護申請権を法的に無効化するものでした。" },
+                    { text: "オーストラリア政府から経済援助を受けながら本土に滞在できました。", correct: false, rationale: "援助ではなく、第三国への移送と収容という厳しい措置が取られました。" },
+                    { text: "国連難民高等弁務官事務所（UNHCR）が直接保護を行いました。", correct: false, rationale: "UNHCRはこの政策に批判的であり、直接の保護主体ではありませんでした。" }
+                ]
+            },
+            {
+                question: "1951年難民条約で重要視されている「ノン・ルフールマン原則」とは何ですか？",
+                topic: "ノン・ルフールマン原則",
+                answers: [
+                    { text: "難民が自由に国境を越える権利を保障する原則です。", correct: false, rationale: "移動の自由も重要ですが、この原則は生命や自由が脅かされる場所への送還禁止に特化しています。" },
+                    { text: "難民を、その生命または自由が脅威にさらされるおそれのある領域の国境へ追放し、または送還してはならないとする原則です。", correct: true, rationale: "これは国際難民保護における最も基本的な cornerstone となる原則です。" },
+                    { text: "難民が最初に到着した国が保護の責任を負う原則です。", correct: false, rationale: "これは「ダブリン規則」に関連する考え方であり、ノン・ルフールマン原則そのものではありません。" },
+                    { text: "難民キャンプでの基本的な生活物資の提供を義務付ける原則です。", correct: false, rationale: "人道支援も重要ですが、この原則は法的な保護、特に送還の禁止に関するものです。" }
+                ]
+            },
+            {
+                question: "ダブリン規則が防ぐことを意図していた「アサイラム・ショッピング」や「アサイラム・オービッティング」とは、どのような行為ですか？",
+                topic: "ダブリン規則とアサイラム・ショッピング",
+                answers: [
+                    { text: "難民が複数の国を渡り歩いて文化体験をする行為です。", correct: false, rationale: "これらの用語は、庇護申請プロセスにおける特定の行動パターンを指すもので、文化体験とは関係ありません。" },
+                    { text: "難民が慈善団体から物資を受け取るために複数の場所を訪れる行為です。", correct: false, rationale: "これは支援を受けるための行動であり、庇護申請の法的プロセスとは直接関係ありません。" },
+                    { text: "アサイラム・ショッピングはEU圏内の国々へ複数の難民申請を行う行為、アサイラム・オービッティングは目当ての国への難民申請をするために国々を渡り歩く行為です。", correct: true, rationale: "ダブリン規則は、一人の申請者に対する審査責任国を一つに定めることで、こうした状況を防ごうとしました。" },
+                    { text: "難民が国際機関を通じて複数の支援プログラムに登録する行為です。", correct: false, rationale: "支援プログラムへの登録は推奨されることであり、規則で防ぐ対象ではありません。" }
+                ]
+            },
+            {
+                question: "EUの「一時的保護指令」は、ウクライナ危機時にどのような目的で発布されましたか？",
+                topic: "EUの一時的保護指令",
+                answers: [
+                    { text: "ウクライナ国民にEU圏内で永住権を与えるためです。", correct: false, rationale: "この指令は「一時的」な保護を目的としており、永住権を直接付与するものではありません。" },
+                    { text: "ウクライナ国民に、EU加盟国での迅速な居住許可と労働許可を与えるためです。", correct: true, rationale: "大規模な避難民に対し、複雑な難民認定プロセスを経ずに、迅速かつ集団的に保護を提供することが目的でした。" },
+                    { text: "EU加盟国間でウクライナ難民の受け入れ数を均等に分配するためです。", correct: false, rationale: "負担の共有は理念としてありますが、厳密な均等分配を義務付けるものではありません。" },
+                    { text: "ウクライナ国内での紛争を停止させるための外交的圧力として利用するためです。", correct: false, rationale: "これは人道的な対応であり、直接的な外交圧力の手段ではありません。" }
+                ]
+            },
+            {
+                question: "グローバル・コンパクトが難民問題の持続可能な解決のために掲げる4つの目的のうち、正しい組み合わせはどれですか？",
+                topic: "難民に関するグローバル・コンパクト",
+                answers: [
+                    { text: "国境管理の強化と難民の強制送還の促進。", correct: false, rationale: "グローバル・コンパクトは保護の強化を目指しており、強制送還の促進はその趣旨に反します。" },
+                    { text: "難民受け入れ国の負担軽減と難民の自立促進。", correct: true, rationale: "国際社会全体で責任を分かち合い、難民が保護に依存し続けるのではなく自立した生活を送れるようにすることが重要な柱です。" },
+                    { text: "難民条約の廃止と新たな国際法の制定。", correct: false, rationale: "既存の国際法を補完し、その実施を強化するものであり、廃止を目指すものではありません。" },
+                    { text: "国際機関の解体と各国政府による単独での対応。", correct: false, rationale: "国際協力の強化を目的としており、各国が単独で対応する方向とは逆です。" }
+                ]
+            },
+            {
+                question: "難民危機時において「一応の難民認定（prima facie refugee status）」が行われるのはどのような状況ですか？",
+                topic: "一応の難民認定 (prima facie)",
+                answers: [
+                    { text: "各国政府が個別の難民申請を慎重に審査できる十分な時間がある場合です。", correct: false, rationale: "この方法は、個別の審査が不可能なほどの緊急事態に対応するために用いられます。" },
+                    { text: "難民が自国の紛争状況を詳細に証明できる書類を所持している場合です。", correct: false, rationale: "書類の有無に関わらず、出身地や特定の集団に属しているという事実だけで認定されるのが特徴です。" },
+                    { text: "政府やUNHCRが深刻な危機から生じる圧倒的な数の申請を個別に処理できないと判断した場合です。", correct: true, rationale: "大規模な人の移動が発生した際に、効率的かつ迅速に保護を提供するための実用的なアプローチです。" },
+                    { text: "難民が特定の宗教的・政治的背景を持つ場合にのみ適用される認定です。", correct: false, rationale: "個人の背景ではなく、出身国の状況に基づいて集団的に適用されるのが一般的です。" }
+                ]
+            },
+            {
+                question: "カナダの庇護希望者保護における現状の課題として、特に法的手続きに関して言及されている問題点は何ですか？",
+                topic: "カナダの庇護希望者保護の課題",
+                answers: [
+                    { text: "庇護審査の迅速化が進みすぎて、十分な審査ができていないこと。", correct: false, rationale: "課題はその逆で、審査の遅延（バックログ）が問題となっています。" },
+                    { text: "法的手続きの制限、長期拘留、そして審査のバックログが高まっていること。", correct: true, rationale: "これらの問題は、庇護希望者が公正かつ迅速な保護を受ける上での大きな障害となっています。" },
+                    { text: "24時間対応の住宅支援が過剰に整備されていること。", correct: false, rationale: "住宅支援は必要とされていますが、法的手続きの問題とは直接関係ありません。" },
+                    { text: "庇護希望者への偏見をなくすための啓発活動が不十分なこと。", correct: false, rationale: "啓発活動も重要ですが、ここで問われているのは法的手続きに関する具体的な問題点です。" }
+                ]
+            },
+            {
+                question: "子どもと女性の保護・エンパワーメントにおいて、身分証明書の欠如が引き起こす深刻な問題は何ですか？",
+                topic: "難民の身分証明書と無国籍問題",
+                answers: [
+                    { text: "難民キャンプでの娯楽活動への参加が制限されることです。", correct: false, rationale: "娯楽への参加も生活の質に関わりますが、無国籍化はより根本的な人権問題です。" },
+                    { text: "無国籍状態となり生活環境が悪化し、移動の過程で書類が破棄されるケースや、出生登録の手続きが複雑で無国籍が恒久化・長期化することです。", correct: true, rationale: "身分証明書の欠如は、教育、医療、移動の自由など、あらゆる権利へのアクセスを妨げ、無国籍という深刻な事態を招きます。" },
+                    { text: "国際機関からの食料援助が受けられなくなることです。", correct: false, rationale: "食料援助は人道に基づき提供されることが多く、必ずしも身分証明書と直結するわけではありません。" },
+                    { text: "特定の宗教儀式に参加できなくなることです。", correct: false, rationale: "これは文化的な側面の問題であり、法的な保護や基本的な権利に関わる無国籍問題とは深刻さが異なります。" }
+                ]
+            },
+            {
+                question: "模擬国連会議において、議題に関する政策立案の際に「アウトオブアジェンダ（議論しないこと）」とされている議題の例として最も適切なものはどれですか？",
+                topic: "模擬国連のアウトオブアジェンダ",
+                answers: [
+                    { text: "各国の経済協力の強化と多国間貿易協定の推進です。", correct: false, rationale: "これらは経済社会理事会などで主要な議題となりうるテーマです。" },
+                    { text: "子ども兵問題や無国籍者問題、また過度に個別具体的な紛争当事国の主張や紛争の発生原因に関する議論です。", correct: true, rationale: "会議の議題から逸脱し、議論を非生産的にする可能性があるため、通常は避けるべきとされます。" },
+                    { text: "気候変動対策の推進と再生可能エネルギーへの転換です。", correct: false, rationale: "これは国連の重要な議題の一つであり、多くの会議で中心的なテーマとなります。" },
+                    { text: "国連改革と安全保障理事会の常任理事国拡大です。", correct: false, rationale: "これも国連総会などで議論される重要なテーマですが、特定の委員会のアジェンダとは異なる場合があります。" }
+                ]
+            }
+        ];
+
+        // --- Elements ---
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultScreen = document.getElementById('result-screen');
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const questionNumberEl = document.getElementById('question-number');
+        const questionTextEl = document.getElementById('question-text');
+        const answerButtonsEl = document.getElementById('answer-buttons');
+        const rationaleContainerEl = document.getElementById('rationale-container');
+        const scoreTextEl = document.getElementById('score-text');
+        const scoreMessageEl = document.getElementById('score-message');
+        const progressEl = document.getElementById('progress');
+        
+        // --- Gemini Elements ---
+        const explainBtn = document.getElementById('explain-btn');
+        const geminiModal = document.getElementById('gemini-modal');
+        const geminiModalContent = document.getElementById('gemini-modal-content');
+        const geminiCloseBtn = document.getElementById('gemini-close-btn');
+        const geminiTitle = document.getElementById('gemini-title');
+        const geminiExplanationEl = document.getElementById('gemini-explanation');
+        const geminiLoader = document.getElementById('gemini-loader');
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+
+        // --- Event Listeners ---
+        startBtn.addEventListener('click', startQuiz);
+        nextBtn.addEventListener('click', () => {
+            currentQuestionIndex++;
+            showQuestion();
+        });
+        restartBtn.addEventListener('click', startQuiz);
+        explainBtn.addEventListener('click', getGeminiExplanation);
+        geminiCloseBtn.addEventListener('click', () => geminiModal.classList.add('hidden'));
+        geminiModal.addEventListener('click', (e) => {
+            if (e.target === geminiModal) {
+                 geminiModal.classList.add('hidden');
+            }
+        });
+
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            quizData.sort(() => Math.random() - 0.5); // Re-shuffle for restart
+            startScreen.classList.add('hidden');
+            resultScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            resetState();
+            if (currentQuestionIndex >= quizData.length) {
+                showResult();
+                return;
+            }
+
+            const currentQuestion = quizData[currentQuestionIndex];
+            questionNumberEl.innerText = currentQuestionIndex + 1;
+            questionTextEl.innerText = currentQuestion.question;
+            explainBtn.dataset.topic = currentQuestion.topic; // Set topic for Gemini button
+
+            currentQuestion.answers.sort(() => Math.random() - 0.5); // Shuffle answers
+
+            currentQuestion.answers.forEach(answer => {
+                const button = document.createElement('button');
+                button.innerText = answer.text;
+                button.classList.add('w-full', 'p-4', 'border-2', 'rounded-lg', 'text-left', 'transition-colors', 'duration-200', 'hover:bg-slate-100', 'hover:border-slate-400');
+                if (answer.correct) {
+                    button.dataset.correct = true;
+                }
+                button.dataset.rationale = answer.rationale;
+                button.addEventListener('click', selectAnswer);
+                answerButtonsEl.appendChild(button);
+            });
+
+            progressEl.style.width = `${((currentQuestionIndex + 1) / quizData.length) * 100}%`;
+        }
+        
+        function resetState() {
+            nextBtn.classList.add('hidden');
+            explainBtn.classList.add('hidden');
+            while(answerButtonsEl.firstChild) {
+                answerButtonsEl.removeChild(answerButtonsEl.firstChild);
+            }
+            rationaleContainerEl.innerHTML = '';
+        }
+
+        function selectAnswer(e) {
+            const selectedBtn = e.target;
+            const correct = selectedBtn.dataset.correct === 'true';
+
+            if(correct) {
+                score++;
+            }
+
+            Array.from(answerButtonsEl.children).forEach(button => {
+                button.disabled = true;
+                if(button.dataset.correct === 'true') {
+                    button.classList.add('correct');
+                } else {
+                    button.classList.add('incorrect');
+                }
+
+                const rationaleText = button.dataset.rationale;
+                const rationaleEl = document.createElement('div');
+                rationaleEl.innerHTML = `<p class="mt-2 text-sm p-3 rounded-lg opacity-0 rationale ${button.dataset.correct === 'true' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${rationaleText}</p>`;
+                rationaleContainerEl.appendChild(rationaleEl);
+                setTimeout(() => {
+                    rationaleEl.querySelector('.rationale').style.opacity = '1';
+                }, 10);
+            });
+
+            nextBtn.classList.remove('hidden');
+            explainBtn.classList.remove('hidden');
+        }
+        
+        function showResult() {
+            quizScreen.classList.add('hidden');
+            resultScreen.classList.remove('hidden');
+            scoreTextEl.innerText = `${score}/${quizData.length}`;
+            let message = '';
+            const percentage = (score / quizData.length) * 100;
+            if (percentage === 100) {
+                message = '素晴らしい！全問正解です！';
+            } else if (percentage >= 80) {
+                message = '優秀です！深く理解されていますね。';
+            } else if (percentage >= 50) {
+                message = '良い調子です！もう一度挑戦して完璧を目指しましょう。';
+            } else {
+                message = 'お疲れ様でした。復習にもう一度挑戦してみましょう！';
+            }
+            scoreMessageEl.innerText = message;
+        }
+
+        // --- Gemini API Call ---
+        async function getGeminiExplanation(e) {
+            const topic = e.target.dataset.topic;
+            if (!topic) return;
+
+            geminiTitle.innerText = `「${topic}」についてのAI解説`;
+            geminiExplanationEl.innerHTML = ''; // Clear previous text
+            geminiExplanationEl.appendChild(geminiLoader);
+            geminiLoader.style.display = 'flex';
+            geminiModal.style.display = 'flex';
+
+            // --- APIキーの設定 ---
+            // 重要：この機能をウェブサイトで動作させるには、Google AI Studioで生成したAPIキーが必要です。
+            // 以下の手順でキーを取得し、下の""の間に貼り付けてください。
+            // 1. https://aistudio.google.com/app/apikey にアクセスします。
+            // 2. 「Create API key in new project」をクリックしてキーを生成します。
+            // 3. 生成されたキーをコピーして、下の 'YOUR_API_KEY_HERE' の部分に貼り付けます。
+            const apiKey = "YOUR_API_KEY_HERE"; 
+
+            if (apiKey === "YOUR_API_KEY_HERE" || apiKey === "") {
+                geminiExplanationEl.innerHTML = '<p class="text-center text-red-600 font-bold">APIキーが設定されていません。<br>HTMLファイル内のコードを編集し、Google AI Studioで取得したAPIキーを設定してください。</p>';
+                geminiLoader.style.display = 'none';
+                return;
+            }
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            
+            const systemPrompt = "あなたは国際難民法と政策の専門家です。会議前のインプットを求めている人向けに、専門用語を避け、簡潔かつ分かりやすく解説してください。";
+            const userQuery = `「${topic}」という概念について、その核心、重要性、そして関連する近年の動きや論点をまとめて、200字程度で解説してください。`;
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: userQuery }] }],
+                        systemInstruction: { parts: [{ text: systemPrompt }] },
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status} ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (text) {
+                    // Simple markdown to HTML conversion for lists
+                    let htmlText = text.replace(/\n/g, '<br>');
+                    htmlText = htmlText.replace(/\* /g, '<br>• ');
+                    geminiExplanationEl.innerHTML = `<p>${htmlText}</p>`;
+                } else {
+                    geminiExplanationEl.innerHTML = '<p>解説を取得できませんでした。もう一度お試しください。</p>';
+                }
+
+            } catch (error) {
+                console.error("Gemini API call failed:", error);
+                geminiExplanationEl.innerHTML = `<p>エラーが発生しました。しばらくしてからもう一度お試しください。<br><br>詳細: ${error.message}</p>`;
+            } finally {
+                geminiLoader.style.display = 'none';
+            }
+        }
+
+    </script>
+</body>
+</html>
+
